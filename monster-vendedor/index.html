@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Monster Vendedor</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b0e0c">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0e0c;
+    --panel:#141815;
+    --panel-2:#1b211c;
+    --line:#262e27;
+    --lime:#b7ff39;
+    --lime-dim:#7ea832;
+    --ink:#eef2ea;
+    --ink-dim:#9aa79a;
+    --red:#ff5d5d;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent;}
+  body{min-height:100vh;padding-bottom:84px;overflow-x:hidden;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Archivo Black',sans-serif;}
+
+  /* claw signature */
+  .claw{position:relative;width:46px;height:34px;flex:none;}
+  .claw svg{width:100%;height:100%;display:block;}
+  .claw-divider{height:14px;width:100%;background-repeat:repeat-x;background-size:34px 14px;background-image:
+    linear-gradient(115deg, transparent 40%, var(--lime) 40%, var(--lime) 52%, transparent 52%);
+    opacity:.55; margin:2px 0 16px;}
+
+  header.top{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,var(--bg) 70%, rgba(11,14,12,0));backdrop-filter:blur(6px);padding:18px 18px 10px;display:flex;align-items:center;gap:12px;}
+  header.top .titles{flex:1;min-width:0;}
+  header.top h1{font-size:18px;margin:0;letter-spacing:.5px;}
+  header.top .date{color:var(--ink-dim);font-size:12px;margin-top:2px;}
+  header.top .badge{background:var(--lime);color:#0b0e0c;font-weight:700;font-size:11px;padding:6px 10px;border-radius:20px;white-space:nowrap;}
+
+  main{padding:6px 16px 24px;max-width:720px;margin:0 auto;}
+
+  .banner{background:var(--panel-2);border:1px solid var(--lime-dim);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;display:flex;gap:12px;align-items:center;}
+  .banner b{color:var(--lime);}
+  .banner p{margin:2px 0 0;color:var(--ink-dim);font-size:13px;}
+
+  .section-title{display:flex;align-items:baseline;justify-content:space-between;margin:18px 0 10px;}
+  .section-title h2{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-dim);margin:0;font-weight:700;}
+  .section-title .count{color:var(--lime);font-size:12px;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;}
+  .client-row{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s, transform .1s;}
+  .client-row:active{transform:scale(.98);}
+  .client-row:hover{border-color:var(--lime-dim);}
+  .client-row .name{font-weight:600;font-size:15px;}
+  .client-row .meta{color:var(--ink-dim);font-size:12px;margin-top:3px;}
+  .client-row .arrow{color:var(--lime);font-size:18px;}
+
+  .pill{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;margin-right:6px;}
+  .pill.promo{background:rgba(183,255,57,.12);color:var(--lime);}
+  .pill.unit{background:rgba(255,255,255,.08);color:var(--ink-dim);}
+
+  .promo-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:10px;position:relative;overflow:hidden;}
+  .promo-card .tag{position:absolute;top:0;right:0;background:var(--lime);color:#0b0e0c;font-weight:700;font-size:11px;padding:5px 12px;border-radius:0 0 0 10px;}
+  .promo-card h3{margin:0 0 4px;font-size:16px;}
+  .promo-card .price{font-family:'JetBrains Mono',monospace;color:var(--lime);font-size:20px;font-weight:700;margin-top:6px;}
+  .promo-card .units{color:var(--ink-dim);font-size:12px;}
+
+  .btn{appearance:none;border:none;border-radius:10px;padding:13px 16px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;}
+  .btn-primary{background:var(--lime);color:#0b0e0c;}
+  .btn-primary:active{transform:scale(.97);}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .btn-danger{background:transparent;border:1px solid rgba(255,93,93,.4);color:var(--red);}
+  .btn-block{width:100%;}
+  .btn-sm{padding:8px 12px;font-size:12px;}
+  .row{display:flex;gap:10px;}
+  .row > *{flex:1;}
+
+  input, select{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    border-radius:10px;padding:12px 13px;font-size:15px;font-family:inherit;margin-bottom:10px;
+  }
+  input:focus, select:focus{outline:none;border-color:var(--lime-dim);}
+  label.field-label{display:block;font-size:12px;color:var(--ink-dim);margin:0 0 6px 2px;text-transform:uppercase;letter-spacing:.5px;}
+
+  .fab{position:fixed;right:18px;bottom:96px;width:54px;height:54px;border-radius:50%;background:var(--lime);
+    color:#0b0e0c;display:flex;align-items:center;justify-content:center;font-size:26px;border:none;
+    box-shadow:0 8px 24px rgba(183,255,57,.25);z-index:25;cursor:pointer;}
+
+  nav.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--panel);border-top:1px solid var(--line);
+    display:flex;z-index:30;padding-bottom:env(safe-area-inset-bottom);}
+  nav.tabbar button{flex:1;background:none;border:none;color:var(--ink-dim);padding:11px 0 9px;font-family:inherit;
+    display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;cursor:pointer;}
+  nav.tabbar button .ic{width:20px;height:20px;}
+  nav.tabbar button.active{color:var(--lime);}
+  nav.tabbar button svg{stroke:currentColor;}
+
+  .empty{text-align:center;padding:36px 10px;color:var(--ink-dim);}
+  .empty .claw{margin:0 auto 12px;opacity:.5;}
+  .empty p{font-size:13px;max-width:240px;margin:6px auto 0;}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:flex;align-items:flex-end;justify-content:center;
+    opacity:0;pointer-events:none;transition:opacity .18s;}
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .sheet{background:var(--panel);width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));
+    transform:translateY(100%);transition:transform .22s ease;max-height:88vh;overflow-y:auto;}
+  .overlay.show .sheet{transform:translateY(0);}
+  .sheet-handle{width:40px;height:4px;background:var(--line);border-radius:4px;margin:0 auto 14px;}
+  .sheet h2{margin:0 0 4px;font-size:18px;}
+  .sheet .sub{color:var(--ink-dim);font-size:13px;margin-bottom:16px;}
+
+  .choice-toggle{display:flex;background:var(--panel-2);border-radius:10px;padding:4px;margin-bottom:16px;}
+  .choice-toggle button{flex:1;border:none;background:none;color:var(--ink-dim);padding:10px;border-radius:8px;font-weight:600;font-size:13px;font-family:inherit;cursor:pointer;}
+  .choice-toggle button.active{background:var(--lime);color:#0b0e0c;}
+
+  .total-line{display:flex;justify-content:space-between;align-items:center;padding:12px 2px;border-top:1px dashed var(--line);margin-top:8px;}
+  .total-line .lbl{color:var(--ink-dim);font-size:13px;}
+  .total-line .val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;color:var(--lime);}
+
+  table.report{width:100%;border-collapse:collapse;font-size:13px;}
+  table.report th{text-align:left;color:var(--ink-dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 6px;border-bottom:1px solid var(--line);}
+  table.report td{padding:10px 6px;border-bottom:1px solid var(--line);}
+  table.report td.num{font-family:'JetBrains Mono',monospace;text-align:right;}
+  table.report tr.totalrow td{font-weight:700;color:var(--lime);border-top:2px solid var(--lime-dim);border-bottom:none;}
+
+  .toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--lime);
+    color:#0b0e0c;padding:11px 18px;border-radius:30px;font-weight:700;font-size:13px;opacity:0;transition:.2s;z-index:60;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .install-hint{font-size:11px;color:var(--ink-dim);margin-top:10px;text-align:center;}
+
+  ::-webkit-scrollbar{width:0;height:0;}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="claw" aria-hidden="true">
+    <svg viewBox="0 0 46 34"><g stroke="#b7ff39" stroke-width="6" stroke-linecap="round">
+      <line x1="4" y1="4" x2="16" y2="30"/><line x1="17" y1="4" x2="29" y2="30"/><line x1="30" y1="4" x2="42" y2="30"/>
+    </g></svg>
+  </div>
+  <div class="titles">
+    <h1 class="display">MONSTER VENDEDOR</h1>
+    <div class="date" id="todayLabel">—</div>
+  </div>
+  <div class="badge" id="clientCountBadge">0 clientes</div>
+</header>
+
+<main>
+  <div id="dueBanner" style="display:none" class="banner">
+    <div class="claw" style="width:30px;height:24px;"><svg viewBox="0 0 46 34"><g stroke="#b7ff39" stroke-width="7" stroke-linecap="round"><line x1="4" y1="4" x2="16" y2="30"/><line x1="17" y1="4" x2="29" y2="30"/><line x1="30" y1="4" x2="42" y2="30"/></g></svg></div>
+    <div><b>Hoy es día de cobro (21)</b><p>Revisá el reporte del mes y cerrá cuentas con tus clientes.</p></div>
+  </div>
+
+  <!-- PROMOCIONES -->
+  <section id="view-promos">
+    <div class="section-title"><h2>Ofertas activas</h2><span class="count" id="promoCount"></span></div>
+    <div id="promoList"></div>
+    <button class="btn btn-ghost btn-block" id="newPromoBtn" style="margin:6px 0 18px;">+ Nueva promoción</button>
+
+    <div class="section-title"><h2>Cobrar promoción a cliente</h2></div>
+    <div id="promoClientList"></div>
+  </section>
+
+  <!-- UNIDADES -->
+  <section id="view-units" style="display:none">
+    <div class="card">
+      <label class="field-label">Precio unitario por defecto</label>
+      <div class="row">
+        <input type="number" id="defaultUnitPrice" inputmode="decimal" placeholder="0">
+        <button class="btn btn-ghost" id="saveUnitPriceBtn" style="flex:none;">Guardar</button>
+      </div>
+    </div>
+    <div class="section-title"><h2>Cobrar unidades a cliente</h2></div>
+    <div id="unitClientList"></div>
+  </section>
+
+  <!-- REPORTE -->
+  <section id="view-report" style="display:none">
+    <div class="card">
+      <div class="row">
+        <select id="reportMonth"></select>
+        <select id="reportYear"></select>
+      </div>
+    </div>
+    <div id="reportContent"></div>
+  </section>
+
+  <!-- CLIENTES -->
+  <section id="view-clients" style="display:none">
+    <div class="card">
+      <label class="field-label">Nombre del cliente</label>
+      <div class="row">
+        <input type="text" id="newClientName" placeholder="Ej: Juan">
+        <button class="btn btn-primary" id="addClientBtn" style="flex:none;">Crear</button>
+      </div>
+    </div>
+    <div class="section-title"><h2>Clientes</h2><span class="count" id="clientsTotalCount"></span></div>
+    <div id="clientsManageList"></div>
+    <p class="install-hint">Para guardar como acceso directo en tu escritorio: abrí el menú del navegador y elegí "Instalar aplicación" o "Agregar a pantalla de inicio".</p>
+  </section>
+</main>
+
+<button class="fab" id="fabBtn" title="Acción rápida">+</button>
+
+<nav class="tabbar">
+  <button data-view="promos" class="active">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2 L5 22 L19 22 Z"/></svg>
+    Promociones
+  </button>
+  <button data-view="units">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+    Unidades
+  </button>
+  <button data-view="report">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 21V8M10 21V3M17 21V12"/></svg>
+    Reporte
+  </button>
+  <button data-view="clients">
+    <svg class="ic" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+    Clientes
+  </button>
+</nav>
+
+<div class="overlay" id="overlay">
+  <div class="sheet" id="sheetContent"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<script>
+/* ---------------- IndexedDB persistence for the SQLite binary ---------------- */
+const IDB_NAME = "monster-vendedor-db";
+function idbOpen(){
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("files");
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+async function idbGet(key){
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction("files", "readonly");
+    const r = tx.objectStore("files").get(key);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbSet(key, value){
+  const db = await idbOpen();
+  return new Promise((res, rej) => {
+    const tx = db.transaction("files", "readwrite");
+    tx.objectStore("files").put(value, key);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+/* ---------------- App state ---------------- */
+let SQL, db;
+let currentView = "promos";
+let pendingChargeClientId = null;
+let pendingChargeType = "promo"; // 'promo' | 'unit'
+
+const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+
+function $(sel){ return document.querySelector(sel); }
+function $all(sel){ return Array.from(document.querySelectorAll(sel)); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function money(n){ return "$" + Math.round(n).toLocaleString("es-CL"); }
+
+function toast(msg){
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove("show"), 1800);
+}
+
+async function persist(){
+  const data = db.export();
+  await idbSet("db", data);
+}
+
+async function initDB(){
+  SQL = await initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` });
+  const saved = await idbGet("db");
+  if (saved) {
+    db = new SQL.Database(new Uint8Array(saved));
+  } else {
+    db = new SQL.Database();
+    db.run(`
+      CREATE TABLE clients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, created_at TEXT);
+      CREATE TABLE promotions (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT NOT NULL, units INTEGER, price REAL, active INTEGER DEFAULT 1);
+      CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT);
+      CREATE TABLE sales (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        promo_id INTEGER,
+        promo_label TEXT,
+        quantity REAL NOT NULL,
+        unit_price REAL NOT NULL,
+        total REAL NOT NULL,
+        date TEXT NOT NULL
+      );
+    `);
+    db.run(`INSERT INTO settings (key, value) VALUES ('unit_price', '1500')`);
+    db.run(`INSERT INTO promotions (label, units, price, active) VALUES ('2 latas', 2, 3000, 1)`);
+    db.run(`INSERT INTO promotions (label, units, price, active) VALUES ('3 latas', 3, 4200, 1)`);
+    await persist();
+  }
+}
+
+function q(sql, params=[]){
+  const stmt = db.prepare(sql);
+  stmt.bind(params);
+  const rows = [];
+  while(stmt.step()) rows.push(stmt.getAsObject());
+  stmt.free();
+  return rows;
+}
+function run(sql, params=[]){
+  db.run(sql, params);
+}
+
+/* ---------------- Data helpers ---------------- */
+function getClients(){ return q(`SELECT * FROM clients ORDER BY name COLLATE NOCASE ASC`); }
+function getPromotions(){ return q(`SELECT * FROM promotions WHERE active=1 ORDER BY id ASC`); }
+function getSetting(key){ const r = q(`SELECT value FROM settings WHERE key=?`, [key]); return r.length? r[0].value : null; }
+function setSetting(key, value){ run(`INSERT INTO settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`, [key, value]); }
+
+function addClient(name){
+  run(`INSERT INTO clients (name, created_at) VALUES (?,?)`, [name.trim(), todayISO()]);
+}
+function deleteClient(id){
+  run(`DELETE FROM clients WHERE id=?`, [id]);
+  run(`DELETE FROM sales WHERE client_id=?`, [id]);
+}
+function addPromotion(label, units, price){
+  run(`INSERT INTO promotions (label, units, price, active) VALUES (?,?,?,1)`, [label, units, price]);
+}
+function deletePromotion(id){
+  run(`UPDATE promotions SET active=0 WHERE id=?`, [id]);
+}
+function registerSale({client_id, type, promo_id, promo_label, quantity, unit_price}){
+  const total = quantity * unit_price;
+  run(`INSERT INTO sales (client_id, type, promo_id, promo_label, quantity, unit_price, total, date) VALUES (?,?,?,?,?,?,?,?)`,
+    [client_id, type, promo_id||null, promo_label||null, quantity, unit_price, total, todayISO()]);
+  return total;
+}
+function clientLastSale(clientId, type){
+  const r = q(`SELECT * FROM sales WHERE client_id=? AND type=? ORDER BY date DESC, id DESC LIMIT 1`, [clientId, type]);
+  return r.length? r[0] : null;
+}
+function clientPromoCountThisMonth(clientId, year, month){
+  const ym = `${year}-${String(month).padStart(2,'0')}`;
+  const r = q(`SELECT COALESCE(SUM(quantity),0) as c FROM sales WHERE client_id=? AND type='promo' AND date LIKE ?`, [clientId, ym+'%']);
+  return r[0].c;
+}
+function monthlyReport(year, month){
+  const ym = `${year}-${String(month).padStart(2,'0')}`;
+  const clients = getClients();
+  const rows = clients.map(c => {
+    const promoTotal = q(`SELECT COALESCE(SUM(total),0) t FROM sales WHERE client_id=? AND type='promo' AND date LIKE ?`, [c.id, ym+'%'])[0].t;
+    const unitTotal = q(`SELECT COALESCE(SUM(total),0) t FROM sales WHERE client_id=? AND type='unit' AND date LIKE ?`, [c.id, ym+'%'])[0].t;
+    return { id:c.id, name:c.name, promoTotal, unitTotal, total: promoTotal+unitTotal };
+  }).filter(r => r.total > 0 || true); // keep all clients visible
+  const grand = rows.reduce((a,r)=>({promo:a.promo+r.promoTotal, unit:a.unit+r.unitTotal, total:a.total+r.total}), {promo:0,unit:0,total:0});
+  return { rows, grand };
+}
+
+/* ---------------- Rendering ---------------- */
+function renderTopBadge(){
+  const n = getClients().length;
+  $("#clientCountBadge").textContent = `${n} cliente${n===1?'':'s'}`;
+}
+function renderDueBanner(){
+  const day = new Date().getDate();
+  $("#dueBanner").style.display = (day === 21) ? "flex" : "none";
+}
+function renderTodayLabel(){
+  const d = new Date();
+  $("#todayLabel").textContent = d.toLocaleDateString("es-CL", { weekday:'long', day:'numeric', month:'long' });
+}
+
+function renderPromosView(){
+  const promos = getPromotions();
+  $("#promoCount").textContent = promos.length;
+  const list = $("#promoList");
+  if (!promos.length){
+    list.innerHTML = `<div class="empty"><p>No hay promociones creadas. Agregá la primera con el botón de abajo.</p></div>`;
+  } else {
+    list.innerHTML = promos.map(p => `
+      <div class="promo-card">
+        <span class="tag">${p.units} un.</span>
+        <h3>${escapeHtml(p.label)}</h3>
+        <div class="units">Promoción activa</div>
+        <div class="price mono">${money(p.price)}</div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn btn-danger btn-sm" data-del-promo="${p.id}" style="flex:none;">Eliminar</button>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  const clients = getClients();
+  const cl = $("#promoClientList");
+  if (!clients.length){
+    cl.innerHTML = `<div class="empty"><p>Creá un cliente en la pestaña "Clientes" para empezar a cobrar promociones.</p></div>`;
+  } else {
+    const now = new Date();
+    cl.innerHTML = clients.map(c => {
+      const last = clientLastSale(c.id, 'promo');
+      const countMonth = clientPromoCountThisMonth(c.id, now.getFullYear(), now.getMonth()+1);
+      return `
+      <div class="client-row" data-client="${c.id}" data-charge="promo">
+        <div>
+          <div class="name">${escapeHtml(c.name)}</div>
+          <div class="meta">
+            <span class="pill promo">${countMonth} este mes</span>
+            ${last ? `Última: ${formatDate(last.date)} · ${money(last.total)}` : 'Sin compras de promo aún'}
+          </div>
+        </div>
+        <div class="arrow">›</div>
+      </div>`;
+    }).join("");
+  }
+}
+
+function renderUnitsView(){
+  $("#defaultUnitPrice").value = getSetting("unit_price") || "";
+  const clients = getClients();
+  const cl = $("#unitClientList");
+  if (!clients.length){
+    cl.innerHTML = `<div class="empty"><p>Creá un cliente en la pestaña "Clientes" para empezar a cobrar unidades.</p></div>`;
+  } else {
+    cl.innerHTML = clients.map(c => {
+      const last = clientLastSale(c.id, 'unit');
+      return `
+      <div class="client-row" data-client="${c.id}" data-charge="unit">
+        <div>
+          <div class="name">${escapeHtml(c.name)}</div>
+          <div class="meta">
+            <span class="pill unit">unidad</span>
+            ${last ? `Última: ${formatDate(last.date)} · ${last.quantity} un. · ${money(last.total)}` : 'Sin compras unitarias aún'}
+          </div>
+        </div>
+        <div class="arrow">›</div>
+      </div>`;
+    }).join("");
+  }
+}
+
+function populateReportSelectors(){
+  const ms = $("#reportMonth"), ys = $("#reportYear");
+  if (!ms.options.length){
+    ms.innerHTML = MONTHS.map((m,i)=>`<option value="${i+1}">${m}</option>`).join("");
+    const thisYear = new Date().getFullYear();
+    ys.innerHTML = [thisYear-1, thisYear, thisYear+1].map(y=>`<option value="${y}">${y}</option>`).join("");
+    ms.value = new Date().getMonth()+1;
+    ys.value = thisYear;
+  }
+}
+function renderReportView(){
+  populateReportSelectors();
+  const month = parseInt($("#reportMonth").value);
+  const year = parseInt($("#reportYear").value);
+  const { rows, grand } = monthlyReport(year, month);
+  const content = $("#reportContent");
+  if (!rows.length){
+    content.innerHTML = `<div class="empty"><p>Todavía no hay clientes para reportar.</p></div>`;
+    return;
+  }
+  content.innerHTML = `
+    <div class="card" style="overflow-x:auto;">
+      <table class="report">
+        <thead><tr><th>Cliente</th><th style="text-align:right">Promos</th><th style="text-align:right">Unidades</th><th style="text-align:right">Total</th></tr></thead>
+        <tbody>
+          ${rows.map(r => `<tr><td>${escapeHtml(r.name)}</td><td class="num">${money(r.promoTotal)}</td><td class="num">${money(r.unitTotal)}</td><td class="num">${money(r.total)}</td></tr>`).join("")}
+          <tr class="totalrow"><td>Total general</td><td class="num">${money(grand.promo)}</td><td class="num">${money(grand.unit)}</td><td class="num">${money(grand.total)}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderClientsView(){
+  const clients = getClients();
+  $("#clientsTotalCount").textContent = clients.length;
+  const list = $("#clientsManageList");
+  if (!clients.length){
+    list.innerHTML = `<div class="empty"><div class="claw"><svg viewBox="0 0 46 34"><g stroke="#b7ff39" stroke-width="6" stroke-linecap="round"><line x1="4" y1="4" x2="16" y2="30"/><line x1="17" y1="4" x2="29" y2="30"/><line x1="30" y1="4" x2="42" y2="30"/></g></svg></div><p>Todavía no creaste clientes. Ingresá un nombre arriba y tocá "Crear".</p></div>`;
+  } else {
+    list.innerHTML = clients.map(c => `
+      <div class="client-row" style="cursor:default;">
+        <div>
+          <div class="name">${escapeHtml(c.name)}</div>
+          <div class="meta">Cliente desde ${formatDate(c.created_at)}</div>
+        </div>
+        <button class="btn btn-danger btn-sm" data-del-client="${c.id}">Eliminar</button>
+      </div>
+    `).join("");
+  }
+}
+
+function renderAll(){
+  renderTopBadge();
+  renderDueBanner();
+  renderTodayLabel();
+  renderPromosView();
+  renderUnitsView();
+  renderReportView();
+  renderClientsView();
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function formatDate(iso){
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("es-CL", { day:'2-digit', month:'short' });
+}
+
+/* ---------------- Navigation ---------------- */
+function switchView(view){
+  currentView = view;
+  ["promos","units","report","clients"].forEach(v => {
+    $("#view-"+v).style.display = (v===view) ? "block" : "none";
+  });
+  $all("nav.tabbar button").forEach(b => b.classList.toggle("active", b.dataset.view===view));
+  $("#fabBtn").style.display = (view==="clients" || view==="report") ? "none" : "flex";
+}
+$all("nav.tabbar button").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
+
+/* ---------------- Sheet (modal) ---------------- */
+function openSheet(html){
+  $("#sheetContent").innerHTML = `<div class="sheet-handle"></div>${html}`;
+  $("#overlay").classList.add("show");
+}
+function closeSheet(){
+  $("#overlay").classList.remove("show");
+}
+$("#overlay").addEventListener("click", (e) => { if (e.target.id === "overlay") closeSheet(); });
+
+function openChargeSheet(clientId, type){
+  const client = q(`SELECT * FROM clients WHERE id=?`, [clientId])[0];
+  pendingChargeClientId = clientId;
+  pendingChargeType = type;
+  const promos = getPromotions();
+  const defaultUnitPrice = getSetting("unit_price") || 0;
+
+  openSheet(`
+    <h2>${escapeHtml(client.name)}</h2>
+    <div class="sub">Elegí qué cobrarle hoy</div>
+    <div class="choice-toggle">
+      <button id="choicePromo" class="${type==='promo'?'active':''}">Promoción</button>
+      <button id="choiceUnit" class="${type==='unit'?'active':''}">Unidades</button>
+    </div>
+    <div id="chargeFields"></div>
+    <button class="btn btn-primary btn-block" id="confirmChargeBtn" style="margin-top:8px;">Registrar cobro</button>
+  `);
+
+  function renderFields(){
+    const fields = $("#chargeFields");
+    if (pendingChargeType === 'promo'){
+      if (!promos.length){
+        fields.innerHTML = `<div class="empty"><p>No hay promociones activas. Creá una en la pestaña Promociones.</p></div>`;
+        return;
+      }
+      fields.innerHTML = `
+        <label class="field-label">Promoción</label>
+        <select id="promoSelect">
+          ${promos.map(p => `<option value="${p.id}" data-price="${p.price}" data-label="${escapeHtml(p.label)}">${escapeHtml(p.label)} — ${money(p.price)}</option>`).join("")}
+        </select>
+        <label class="field-label">Cantidad de veces</label>
+        <input type="number" id="qtyInput" min="1" value="1">
+        <div class="total-line"><span class="lbl">Total a cobrar</span><span class="val mono" id="liveTotal">${money(promos[0].price)}</span></div>
+      `;
+      const update = () => {
+        const sel = $("#promoSelect");
+        const price = parseFloat(sel.selectedOptions[0].dataset.price);
+        const qty = parseFloat($("#qtyInput").value || 1);
+        $("#liveTotal").textContent = money(price * qty);
+      };
+      $("#promoSelect").addEventListener("change", update);
+      $("#qtyInput").addEventListener("input", update);
+    } else {
+      fields.innerHTML = `
+        <label class="field-label">Cantidad de unidades</label>
+        <input type="number" id="qtyInput" min="1" value="1">
+        <label class="field-label">Precio unitario</label>
+        <input type="number" id="unitPriceInput" min="0" value="${defaultUnitPrice}">
+        <div class="total-line"><span class="lbl">Total a cobrar</span><span class="val mono" id="liveTotal">${money(defaultUnitPrice)}</span></div>
+      `;
+      const update = () => {
+        const qty = parseFloat($("#qtyInput").value || 1);
+        const price = parseFloat($("#unitPriceInput").value || 0);
+        $("#liveTotal").textContent = money(qty * price);
+      };
+      $("#qtyInput").addEventListener("input", update);
+      $("#unitPriceInput").addEventListener("input", update);
+    }
+  }
+  renderFields();
+
+  $("#choicePromo").addEventListener("click", () => { pendingChargeType='promo'; $("#choicePromo").classList.add("active"); $("#choiceUnit").classList.remove("active"); renderFields(); });
+  $("#choiceUnit").addEventListener("click", () => { pendingChargeType='unit'; $("#choiceUnit").classList.add("active"); $("#choicePromo").classList.remove("active"); renderFields(); });
+
+  $("#confirmChargeBtn").addEventListener("click", async () => {
+    const qty = parseFloat($("#qtyInput")?.value || 1);
+    let total;
+    if (pendingChargeType === 'promo'){
+      const sel = $("#promoSelect");
+      if (!sel) return;
+      const price = parseFloat(sel.selectedOptions[0].dataset.price);
+      const label = sel.selectedOptions[0].dataset.label;
+      const promoId = parseInt(sel.value);
+      total = registerSale({ client_id: clientId, type:'promo', promo_id: promoId, promo_label: label, quantity: qty, unit_price: price });
+    } else {
+      const price = parseFloat($("#unitPriceInput").value || 0);
+      total = registerSale({ client_id: clientId, type:'unit', quantity: qty, unit_price: price });
+    }
+    await persist();
+    closeSheet();
+    renderAll();
+    toast(`Cobro registrado: ${money(total)}`);
+  });
+}
+
+function openNewPromoSheet(){
+  openSheet(`
+    <h2>Nueva promoción</h2>
+    <div class="sub">Definí la oferta que vas a ofrecer a tus clientes</div>
+    <label class="field-label">Nombre de la promoción</label>
+    <input type="text" id="promoLabelInput" placeholder="Ej: 2 latas">
+    <label class="field-label">Unidades incluidas</label>
+    <input type="number" id="promoUnitsInput" min="1" value="2">
+    <label class="field-label">Precio total de la promo</label>
+    <input type="number" id="promoPriceInput" min="0" placeholder="0">
+    <button class="btn btn-primary btn-block" id="savePromoBtn">Crear promoción</button>
+  `);
+  $("#savePromoBtn").addEventListener("click", async () => {
+    const label = $("#promoLabelInput").value.trim();
+    const units = parseInt($("#promoUnitsInput").value || 0);
+    const price = parseFloat($("#promoPriceInput").value || 0);
+    if (!label || !price){ toast("Completá nombre y precio"); return; }
+    addPromotion(label, units, price);
+    await persist();
+    closeSheet();
+    renderAll();
+    toast("Promoción creada");
+  });
+}
+
+/* ---------------- Event delegation ---------------- */
+document.body.addEventListener("click", async (e) => {
+  const clientRow = e.target.closest(".client-row[data-client]");
+  if (clientRow){
+    openChargeSheet(parseInt(clientRow.dataset.client), clientRow.dataset.charge);
+    return;
+  }
+  const delPromo = e.target.closest("[data-del-promo]");
+  if (delPromo){
+    if (confirm("¿Eliminar esta promoción?")){
+      deletePromotion(parseInt(delPromo.dataset.delPromo));
+      await persist();
+      renderAll();
+      toast("Promoción eliminada");
+    }
+    return;
+  }
+  const delClient = e.target.closest("[data-del-client]");
+  if (delClient){
+    if (confirm("¿Eliminar este cliente y su historial de compras?")){
+      deleteClient(parseInt(delClient.dataset.delClient));
+      await persist();
+      renderAll();
+      toast("Cliente eliminado");
+    }
+    return;
+  }
+});
+
+$("#newPromoBtn").addEventListener("click", openNewPromoSheet);
+$("#fabBtn").addEventListener("click", () => {
+  if (currentView === "promos") openNewPromoSheet();
+  else switchView("clients");
+});
+
+$("#addClientBtn").addEventListener("click", async () => {
+  const input = $("#newClientName");
+  const name = input.value.trim();
+  if (!name){ toast("Ingresá un nombre"); return; }
+  addClient(name);
+  await persist();
+  input.value = "";
+  renderAll();
+  toast(`Cliente "${name}" creado`);
+});
+$("#newClientName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#addClientBtn").click(); });
+
+$("#saveUnitPriceBtn").addEventListener("click", async () => {
+  const val = parseFloat($("#defaultUnitPrice").value || 0);
+  setSetting("unit_price", String(val));
+  await persist();
+  toast("Precio guardado");
+});
+
+$("#reportMonth").addEventListener("change", renderReportView);
+$("#reportYear").addEventListener("change", renderReportView);
+
+/* ---------------- Boot ---------------- */
+(async function boot(){
+  await initDB();
+  switchView("promos");
+  renderAll();
+  if ("serviceWorker" in navigator){
+    try { await navigator.serviceWorker.register("sw.js"); } catch(e){ console.warn("SW no registrado", e); }
+  }
+})();
+</script>
+</body>
+</html>
