@@ -1,4 +1,4 @@
-const CACHE = "monster-vendedor-v1";
+const CACHE = "monster-vendedor-v2";
 const ASSETS = [
   "./index.html",
   "./manifest.json",
