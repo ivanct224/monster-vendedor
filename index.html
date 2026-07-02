@@ -188,6 +188,9 @@
         <select id="reportMonth"></select>
         <select id="reportYear"></select>
       </div>
+      <button class="btn btn-primary btn-block" id="downloadPdfBtn" style="margin-top:4px;">
+        ⬇ Descargar reporte PDF
+      </button>
     </div>
     <div id="reportContent"></div>
   </section>
@@ -234,6 +237,8 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 /* ---------------- IndexedDB persistence for the SQLite binary ---------------- */
 const IDB_NAME = "monster-vendedor-db";
@@ -715,6 +720,152 @@ $("#saveUnitPriceBtn").addEventListener("click", async () => {
 
 $("#reportMonth").addEventListener("change", renderReportView);
 $("#reportYear").addEventListener("change", renderReportView);
+
+$("#downloadPdfBtn").addEventListener("click", () => {
+  const month = parseInt($("#reportMonth").value);
+  const year = parseInt($("#reportYear").value);
+  const { rows, grand } = monthlyReport(year, month);
+  const monthName = MONTHS[month - 1];
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+  // ---- Fondo oscuro ----
+  doc.setFillColor(11, 14, 12);
+  doc.rect(0, 0, 210, 297, "F");
+
+  // ---- Garra decorativa (3 líneas diagonales) ----
+  doc.setDrawColor(183, 255, 57);
+  doc.setLineWidth(2.5);
+  const clawX = 15, clawY = 14;
+  [[0,0,5,14],[7,0,12,14],[14,0,19,14]].forEach(([x1,y1,x2,y2]) => {
+    doc.line(clawX+x1, clawY+y1, clawX+x2, clawY+y2);
+  });
+
+  // ---- Título ----
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(183, 255, 57);
+  doc.text("MONSTER VENDEDOR", 40, 22);
+
+  doc.setFontSize(11);
+  doc.setTextColor(154, 167, 154);
+  doc.text(`Reporte mensual — ${monthName} ${year}`, 40, 29);
+
+  doc.setDrawColor(38, 46, 39);
+  doc.setLineWidth(0.4);
+  doc.line(15, 34, 195, 34);
+
+  // ---- Resumen de totales (tarjetas) ----
+  const cards = [
+    { label: "Total Promociones", value: money(grand.promo), x: 15 },
+    { label: "Total Unidades",    value: money(grand.unit),  x: 80  },
+    { label: "Total General",     value: money(grand.total), x: 145 },
+  ];
+  cards.forEach(({ label, value, x }) => {
+    doc.setFillColor(20, 24, 21);
+    doc.roundedRect(x, 38, 60, 22, 3, 3, "F");
+    doc.setFontSize(8);
+    doc.setTextColor(154, 167, 154);
+    doc.text(label, x + 5, 46);
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(183, 255, 57);
+    doc.text(value, x + 5, 55);
+  });
+
+  // ---- Tabla por cliente ----
+  doc.autoTable({
+    startY: 68,
+    head: [["Cliente", "Promociones", "Unidades", "Total"]],
+    body: [
+      ...rows.map(r => [r.name, money(r.promoTotal), money(r.unitTotal), money(r.total)]),
+      ["TOTAL GENERAL", money(grand.promo), money(grand.unit), money(grand.total)],
+    ],
+    styles: {
+      font: "helvetica",
+      fontSize: 10,
+      cellPadding: 4,
+      textColor: [238, 242, 234],
+      fillColor: [20, 24, 21],
+      lineColor: [38, 46, 39],
+      lineWidth: 0.3,
+    },
+    headStyles: {
+      fillColor: [27, 33, 28],
+      textColor: [154, 167, 154],
+      fontStyle: "bold",
+      fontSize: 9,
+    },
+    foot: [],
+    didParseCell(data) {
+      // Fila de total al final resaltada en lima
+      if (data.row.index === rows.length) {
+        data.cell.styles.textColor = [183, 255, 57];
+        data.cell.styles.fontStyle = "bold";
+        data.cell.styles.fillColor = [27, 33, 28];
+      }
+      // Columnas numéricas alineadas a la derecha
+      if (data.column.index > 0) {
+        data.cell.styles.halign = "right";
+      }
+    },
+    margin: { left: 15, right: 15 },
+    alternateRowStyles: { fillColor: [17, 21, 18] },
+    tableLineColor: [38, 46, 39],
+    tableLineWidth: 0.3,
+  });
+
+  // ---- Detalle de ventas por cliente ----
+  const finalY = doc.lastAutoTable.finalY + 10;
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(154, 167, 154);
+  doc.text("Detalle de ventas del mes", 15, finalY);
+
+  const ym = `${year}-${String(month).padStart(2,'0')}`;
+  let curY = finalY + 6;
+
+  rows.forEach(r => {
+    if (r.total === 0) return;
+    const sales = q(`SELECT * FROM sales WHERE client_id=? AND date LIKE ? ORDER BY date ASC`, [r.id, ym+'%']);
+    if (!sales.length) return;
+
+    // Chequeamos si necesitamos nueva página
+    if (curY > 250) { doc.addPage(); doc.setFillColor(11,14,12); doc.rect(0,0,210,297,"F"); curY = 20; }
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(183, 255, 57);
+    doc.text(r.name, 15, curY);
+    curY += 5;
+
+    sales.forEach(s => {
+      if (curY > 275) { doc.addPage(); doc.setFillColor(11,14,12); doc.rect(0,0,210,297,"F"); curY = 20; }
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(238, 242, 234);
+      const tipo = s.type === 'promo' ? `Promo (${s.promo_label || ''}) x${s.quantity}` : `Unidad x${s.quantity}`;
+      doc.text(`${formatDate(s.date)}  ${tipo}`, 20, curY);
+      doc.setTextColor(183, 255, 57);
+      doc.text(money(s.total), 185, curY, { align: "right" });
+      curY += 5;
+    });
+    curY += 3;
+  });
+
+  // ---- Pie de página ----
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(60, 70, 62);
+    doc.text(`Monster Vendedor · ${monthName} ${year} · Página ${i} de ${pageCount}`, 105, 290, { align: "center" });
+  }
+
+  doc.save(`reporte-monster-${year}-${String(month).padStart(2,'0')}.pdf`);
+  toast("PDF descargado");
+});
 
 /* ---------------- Boot ---------------- */
 (async function boot(){
