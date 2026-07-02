@@ -206,7 +206,25 @@
     </div>
     <div class="section-title"><h2>Clientes</h2><span class="count" id="clientsTotalCount"></span></div>
     <div id="clientsManageList"></div>
-    <p class="install-hint">Para guardar como acceso directo en tu escritorio: abrí el menú del navegador y elegí "Instalar aplicación" o "Agregar a pantalla de inicio".</p>
+
+    <div class="section-title" style="margin-top:24px;"><h2>Backup de datos</h2></div>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px;">
+      <div>
+        <div style="font-weight:600;margin-bottom:3px;">Exportar</div>
+        <div style="color:var(--ink-dim);font-size:13px;margin-bottom:10px;">Descarga un archivo <b style="color:var(--ink)">.json</b> con todos tus clientes, cobros y promociones. Guardalo en Google Drive, WhatsApp o donde quieras.</div>
+        <button class="btn btn-primary btn-block" id="exportBtn">&#11015; Exportar backup</button>
+      </div>
+      <div style="border-top:1px dashed var(--line);padding-top:10px;">
+        <div style="font-weight:600;margin-bottom:3px;">Importar</div>
+        <div style="color:var(--ink-dim);font-size:13px;margin-bottom:10px;">Restaura un backup previo. <b style="color:var(--red)">Ojo: reemplaza todos los datos actuales.</b></div>
+        <label class="btn btn-ghost btn-block" style="display:block;text-align:center;cursor:pointer;">
+          &#11014; Importar backup
+          <input type="file" id="importFile" accept=".json" style="display:none;">
+        </label>
+      </div>
+    </div>
+
+    <p class="install-hint">Para guardar como acceso directo: abrí el menú del navegador y elegí "Instalar aplicación" o "Agregar a pantalla de inicio".</p>
   </section>
 </main>
 
@@ -865,6 +883,95 @@ $("#downloadPdfBtn").addEventListener("click", () => {
 
   doc.save(`reporte-monster-${year}-${String(month).padStart(2,'0')}.pdf`);
   toast("PDF descargado");
+});
+
+/* ---------------- Backup Export / Import ---------------- */
+$("#exportBtn").addEventListener("click", () => {
+  const clients   = q(`SELECT * FROM clients`);
+  const promos    = q(`SELECT * FROM promotions`);
+  const sales     = q(`SELECT * FROM sales`);
+  const settings  = q(`SELECT * FROM settings`);
+
+  const backup = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    clients,
+    promotions: promos,
+    sales,
+    settings
+  };
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  const fecha = new Date().toISOString().slice(0,10);
+  a.href     = url;
+  a.download = `monster-backup-${fecha}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast("Backup exportado");
+});
+
+$("#importFile").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const text = await file.text();
+  let backup;
+  try {
+    backup = JSON.parse(text);
+  } catch {
+    toast("Archivo inválido"); return;
+  }
+
+  if (!backup.clients || !backup.sales) {
+    toast("El archivo no es un backup válido"); return;
+  }
+
+  const ok = confirm(
+    `Vas a restaurar un backup del ${backup.exportedAt ? backup.exportedAt.slice(0,10) : 'fecha desconocida'}.\n\n` +
+    `Esto va a REEMPLAZAR todos los datos actuales:\n` +
+    `• ${backup.clients.length} clientes\n` +
+    `• ${backup.sales.length} cobros\n` +
+    `• ${(backup.promotions||[]).length} promociones\n\n` +
+    `¿Continuás?`
+  );
+  if (!ok) { e.target.value = ""; return; }
+
+  // Limpiar tablas
+  run(`DELETE FROM sales`);
+  run(`DELETE FROM clients`);
+  run(`DELETE FROM promotions`);
+  run(`DELETE FROM settings`);
+
+  // Restaurar settings
+  (backup.settings || []).forEach(s => {
+    run(`INSERT INTO settings (key, value) VALUES (?,?)`, [s.key, s.value]);
+  });
+
+  // Restaurar clientes (guardando mapa de id viejo → nuevo)
+  const clientIdMap = {};
+  (backup.clients || []).forEach(c => {
+    run(`INSERT INTO clients (id, name, created_at) VALUES (?,?,?)`, [c.id, c.name, c.created_at]);
+    clientIdMap[c.id] = c.id;
+  });
+
+  // Restaurar promociones
+  (backup.promotions || []).forEach(p => {
+    run(`INSERT INTO promotions (id, label, units, price, active) VALUES (?,?,?,?,?)`,
+      [p.id, p.label, p.units, p.price, p.active]);
+  });
+
+  // Restaurar ventas
+  (backup.sales || []).forEach(s => {
+    run(`INSERT INTO sales (id, client_id, type, promo_id, promo_label, quantity, unit_price, total, date) VALUES (?,?,?,?,?,?,?,?,?)`,
+      [s.id, s.client_id, s.type, s.promo_id||null, s.promo_label||null, s.quantity, s.unit_price, s.total, s.date]);
+  });
+
+  await persist();
+  renderAll();
+  e.target.value = "";
+  toast(`Backup restaurado: ${backup.clients.length} clientes, ${backup.sales.length} cobros`);
 });
 
 /* ---------------- Boot ---------------- */
