@@ -1,6 +1,6 @@
 {
-  "name": "Monster Vendedor",
-  "short_name": "M.Vendedor",
+  "name": "Monster",
+  "short_name": "MONSTER",
   "description": "Control de ventas Monster: promociones, unidades y cobros mensuales",
   "start_url": "./index.html",
   "scope": "./",
